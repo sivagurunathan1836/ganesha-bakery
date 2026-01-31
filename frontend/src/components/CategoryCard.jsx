@@ -20,18 +20,46 @@ const categoryColors = {
 const CategoryCard = ({ category }) => {
     const Icon = categoryIcons[category.name] || FaCookieBite;
     const gradient = categoryColors[category.name] || 'linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%)';
+    const hasImage = category.image && category.image.trim() !== '';
 
     return (
         <Link to={`/products?category=${category._id}`} className="category-card">
-            <div
-                className="category-card-bg"
-                style={{ background: gradient }}
-            />
+            {/* Show image if available, otherwise show gradient background */}
+            {hasImage ? (
+                <div
+                    className="category-card-bg"
+                    style={{
+                        backgroundImage: `url(${category.image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                    }}
+                />
+            ) : (
+                <div
+                    className="category-card-bg"
+                    style={{ background: gradient }}
+                />
+            )}
+
+            {/* Overlay for better text visibility when using image */}
+            {hasImage && (
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.1) 100%)',
+                        borderRadius: 'inherit'
+                    }}
+                />
+            )}
+
             <div className="category-card-content">
-                <Icon className="category-card-icon" />
-                <h3 className="category-card-name">{category.name}</h3>
+                {!hasImage && <Icon className="category-card-icon" />}
+                <h3 className="category-card-name" style={hasImage ? { color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.5)' } : {}}>
+                    {category.name}
+                </h3>
                 {category.subcategories && category.subcategories.length > 0 && (
-                    <p className="category-card-count">
+                    <p className="category-card-count" style={hasImage ? { color: 'rgba(255,255,255,0.9)' } : {}}>
                         {category.subcategories.length} subcategories
                     </p>
                 )}

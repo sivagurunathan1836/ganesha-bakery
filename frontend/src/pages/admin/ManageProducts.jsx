@@ -4,6 +4,8 @@ import { FiHome, FiPackage, FiGrid, FiShoppingBag, FiBox, FiPlus, FiEdit2, FiTra
 import { productsAPI, categoriesAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
+const BASE_URL = 'http://localhost:5000';
+
 const ManageProducts = () => {
     const location = useLocation();
     const [products, setProducts] = useState([]);
@@ -20,7 +22,8 @@ const ManageProducts = () => {
         subcategory: '',
         stock: '',
         isFeatured: false,
-        image: ''
+        image: '',
+        imageFile: null
     });
 
     const fetchData = async () => {
@@ -43,23 +46,41 @@ const ManageProducts = () => {
     }, []);
 
     const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormData({
-            ...formData,
-            [name]: type === 'checkbox' ? checked : value
-        });
+        const { name, value, type, checked, files } = e.target;
+        if (type === 'file') {
+            setFormData({
+                ...formData,
+                imageFile: files[0]
+            });
+        } else {
+            setFormData({
+                ...formData,
+                [name]: type === 'checkbox' ? checked : value
+            });
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const data = {
-                ...formData,
-                price: parseFloat(formData.price),
-                stock: parseInt(formData.stock)
-            };
+            const data = new FormData();
+            data.append('name', formData.name);
+            data.append('description', formData.description || '');
+            data.append('price', parseFloat(formData.price));
+            data.append('priceUnit', formData.priceUnit);
+            data.append('category', formData.category);
+            data.append('subcategory', formData.subcategory || '');
+            data.append('stock', parseInt(formData.stock));
+            data.append('isFeatured', formData.isFeatured);
 
+            if (formData.imageFile) {
+                data.append('image', formData.imageFile);
+            } else if (formData.image) {
+                data.append('image', formData.image);
+            }
+
+            // Products API handles Content-Type automatically when data is FormData
             if (editingProduct) {
                 await productsAPI.update(editingProduct._id, data);
                 toast.success('Product updated successfully');
@@ -72,6 +93,7 @@ const ManageProducts = () => {
             resetForm();
             fetchData();
         } catch (error) {
+            console.error('Save product error:', error);
             toast.error(error.response?.data?.message || 'Failed to save product');
         }
     };
@@ -115,7 +137,8 @@ const ManageProducts = () => {
             subcategory: '',
             stock: '',
             isFeatured: false,
-            image: ''
+            image: '',
+            imageFile: null
         });
     };
 
@@ -188,7 +211,7 @@ const ManageProducts = () => {
                                 <tr key={product._id}>
                                     <td>
                                         <img
-                                            src={product.image || `https://placehold.co/50x50/f5e6d3/5c4033?text=${product.name[0]}`}
+                                            src={product.image ? (product.image.startsWith('http') ? product.image : `${BASE_URL}${product.image}`) : `https://placehold.co/50x50/f5e6d3/5c4033?text=${product.name[0]}`}
                                             alt={product.name}
                                             className="admin-table-image"
                                             onError={(e) => {
@@ -344,15 +367,66 @@ const ManageProducts = () => {
                                     </div>
 
                                     <div className="form-group">
-                                        <label className="form-label">Image URL</label>
-                                        <input
-                                            type="text"
-                                            name="image"
-                                            className="form-input"
-                                            placeholder="https://example.com/image.jpg"
-                                            value={formData.image}
-                                            onChange={handleChange}
-                                        />
+                                        <label className="form-label">Product Image</label>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            {/* Image URL Input */}
+                                            <div>
+                                                <label className="form-label" style={{ fontSize: '0.9em', color: 'var(--gray-600)' }}>Image URL</label>
+                                                <input
+                                                    type="text"
+                                                    name="image"
+                                                    className="form-input"
+                                                    placeholder="https://example.com/image.jpg"
+                                                    value={formData.image}
+                                                    onChange={(e) => {
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            image: e.target.value,
+                                                            imageFile: null // Clear file if URL is entered
+                                                        }));
+                                                    }}
+                                                />
+                                            </div>
+
+                                            {/* File Upload */}
+                                            <div>
+                                                <label className="form-label" style={{ fontSize: '0.9em', color: 'var(--gray-600)' }}>Or Upload Image</label>
+                                                <input
+                                                    type="file"
+                                                    name="imageFile" // Changed name to avoid conflict with text input
+                                                    className="form-input"
+                                                    accept="image/*"
+                                                    onChange={handleChange}
+                                                />
+                                            </div>
+
+                                            {/* Image Preview */}
+                                            {(formData.image || formData.imageFile) && (
+                                                <div style={{
+                                                    marginTop: '8px',
+                                                    border: '1px solid var(--gray-300)',
+                                                    borderRadius: '8px',
+                                                    padding: '8px',
+                                                    width: 'fit-content'
+                                                }}>
+                                                    <p style={{ fontSize: '0.8em', marginBottom: '8px', color: 'var(--gray-600)' }}>Preview:</p>
+                                                    <img
+                                                        src={
+                                                            formData.imageFile
+                                                                ? URL.createObjectURL(formData.imageFile)
+                                                                : formData.image.startsWith('http')
+                                                                    ? formData.image
+                                                                    : `${BASE_URL}${formData.image}`
+                                                        }
+                                                        alt="Preview"
+                                                        style={{ maxWidth: '200px', maxHeight: '200px', objectFit: 'contain', borderRadius: '4px' }}
+                                                        onError={(e) => {
+                                                            e.target.src = 'https://placehold.co/200x200/f5e6d3/5c4033?text=Invalid+Image';
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>

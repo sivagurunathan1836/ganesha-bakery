@@ -58,10 +58,11 @@ const ProductCard = ({ product, onCartUpdate }) => {
     return (
         <div className="product-card">
             <Link to={`/products/${product._id}`}>
-                <div className="product-card-image">
+                <div className="product-card-image" style={{ backgroundColor: '#000' }}>
                     <img
                         src={getProductImage()}
                         alt={product.name}
+                        style={{ opacity: isOutOfStock ? 0.5 : 1 }}
                         onError={(e) => {
                             e.target.src = `https://placehold.co/400x300/f5e6d3/5c4033?text=${encodeURIComponent(product.name)}`;
                         }}

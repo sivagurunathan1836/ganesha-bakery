@@ -96,7 +96,13 @@ exports.getProductsByCategory = async (req, res) => {
 // @access  Private/Admin
 exports.createProduct = async (req, res) => {
     try {
-        const { name, description, price, priceUnit, category, subcategory, image, stock, isFeatured } = req.body;
+        const { name, description, price, priceUnit, category, subcategory, stock, isFeatured } = req.body;
+
+        // Handle image upload
+        let image = req.body.image || '';
+        if (req.file) {
+            image = `/uploads/${req.file.filename}`;
+        }
 
         const product = await Product.create({
             name,
@@ -123,7 +129,7 @@ exports.createProduct = async (req, res) => {
 // @access  Private/Admin
 exports.updateProduct = async (req, res) => {
     try {
-        const { name, description, price, priceUnit, category, subcategory, image, stock, isAvailable, isFeatured } = req.body;
+        const { name, description, price, priceUnit, category, subcategory, stock, isAvailable, isFeatured } = req.body;
 
         const product = await Product.findById(req.params.id);
 
@@ -134,7 +140,14 @@ exports.updateProduct = async (req, res) => {
             product.priceUnit = priceUnit || product.priceUnit;
             product.category = category || product.category;
             product.subcategory = subcategory || product.subcategory;
-            product.image = image || product.image;
+
+            // Handle image upload
+            if (req.file) {
+                product.image = `/uploads/${req.file.filename}`;
+            } else if (req.body.image) {
+                product.image = req.body.image;
+            }
+
             product.stock = stock !== undefined ? stock : product.stock;
             product.isAvailable = isAvailable !== undefined ? isAvailable : product.isAvailable;
             product.isFeatured = isFeatured !== undefined ? isFeatured : product.isFeatured;

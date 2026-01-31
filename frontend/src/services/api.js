@@ -3,10 +3,7 @@ import axios from 'axios';
 const API_URL = '/api';
 
 const api = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json'
-    }
+    baseURL: API_URL
 });
 
 // Add token to requests
@@ -86,6 +83,13 @@ export const ordersAPI = {
     // Admin
     getAllAdmin: (params) => api.get('/orders/admin/all', { params }),
     updateStatus: (id, status) => api.put(`/orders/${id}/status`, { status })
+};
+
+// Payment API
+export const paymentAPI = {
+    createOrder: (data) => api.post('/payment/create-order', data),
+    verifyPayment: (data) => api.post('/payment/verify', data),
+    getKey: () => api.get('/payment/key')
 };
 
 export default api;

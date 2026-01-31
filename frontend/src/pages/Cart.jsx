@@ -1,17 +1,40 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiShoppingBag, FiTrash2, FiArrowRight } from 'react-icons/fi';
+import { FiShoppingBag, FiTrash2, FiArrowRight, FiCreditCard, FiDollarSign, FiCheckCircle, FiAlertTriangle } from 'react-icons/fi';
+import { QRCodeSVG } from 'qrcode.react';
 import CartItem from '../components/CartItem';
-import { cartAPI } from '../services/api';
+import { cartAPI, ordersAPI, paymentAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const Cart = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [cart, setCart] = useState(null);
     const [totalItems, setTotalItems] = useState(0);
     const [totalAmount, setTotalAmount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState('cod');
+    const [confirmingPayment, setConfirmingPayment] = useState(false);
+    const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+
+    // Tax calculation (5% GST)
+    const TAX_RATE = 0.05;
+    const subtotal = totalAmount;
+    const tax = subtotal * TAX_RATE;
+    const finalTotal = subtotal + tax;
+
+    // Generate dynamic UPI payment URL with cart total
+    const generateUPIUrl = () => {
+        const upiId = 'sekarparameshwari09-1@oksbi';
+        const payeeName = 'Ganesh Bakery';
+        const amount = finalTotal.toFixed(2);
+        const currency = 'INR';
+        const transactionNote = 'Order Payment';
+
+        return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=${currency}&tn=${encodeURIComponent(transactionNote)}`;
+    };
 
     const fetchCart = async () => {
         try {
@@ -75,6 +98,127 @@ const Cart = () => {
         }
     };
 
+    // Check if any items are out of stock
+    const hasOutOfStock = cart?.items.some(item => item.product?.stock === 0) || false;
+
+    // Handle COD Order
+    const handleCODOrder = async () => {
+        if (!user) {
+            toast.error('Please login to place order');
+            navigate('/login');
+            return;
+        }
+
+        setConfirmingPayment(true);
+        try {
+            const orderData = {
+                shippingAddress: {
+                    name: user.name,
+                    phone: user.phone || '',
+                    street: 'To be updated',
+                    city: 'To be updated',
+                    state: 'To be updated',
+                    pincode: '000000'
+                },
+                paymentMethod: 'cod',
+                paymentStatus: 'Pending',
+                notes: 'Cash on Delivery'
+            };
+
+            const response = await ordersAPI.create(orderData);
+            toast.success('Order placed successfully!');
+            navigate(`/orders/${response.data._id}`);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to place order');
+        } finally {
+            setConfirmingPayment(false);
+        }
+    };
+
+    // Handle Razorpay Payment
+    const handleRazorpayPayment = async () => {
+        if (!user) {
+            toast.error('Please login to place order');
+            navigate('/login');
+            return;
+        }
+
+        setConfirmingPayment(true);
+
+        try {
+            // Step 1: Create Razorpay order
+            const orderResponse = await paymentAPI.createOrder({
+                amount: finalTotal,
+                currency: 'INR',
+                receipt: `receipt_${Date.now()}`
+            });
+
+            const { order, key_id } = orderResponse.data;
+
+            // Step 2: Open Razorpay checkout
+            const options = {
+                key: key_id,
+                amount: order.amount,
+                currency: order.currency,
+                name: 'Ganesh Bakery',
+                description: 'Order Payment',
+                order_id: order.id,
+                prefill: {
+                    name: user.name,
+                    email: user.email,
+                    contact: user.phone || ''
+                },
+                theme: {
+                    color: '#d4a574'
+                },
+                handler: async function (response) {
+                    // Step 3: Verify payment on backend
+                    try {
+                        const verifyResponse = await paymentAPI.verifyPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            orderData: {
+                                shippingAddress: {
+                                    name: user.name,
+                                    phone: user.phone || '',
+                                    street: 'To be updated',
+                                    city: 'To be updated',
+                                    state: 'To be updated',
+                                    pincode: '000000'
+                                },
+                                notes: 'Paid via Razorpay UPI'
+                            }
+                        });
+
+                        if (verifyResponse.data.success) {
+                            toast.success('Payment successful! Order placed automatically.');
+                            navigate(`/orders/${verifyResponse.data.order._id}`);
+                        }
+                    } catch (error) {
+                        toast.error('Payment verification failed. Please contact support.');
+                        console.error('Verification error:', error);
+                    }
+                },
+                modal: {
+                    ondismiss: function () {
+                        setConfirmingPayment(false);
+                        toast.error('Payment cancelled');
+                    }
+                }
+            };
+
+            const razorpayInstance = new window.Razorpay(options);
+            razorpayInstance.open();
+
+        } catch (error) {
+            console.error('Razorpay init error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to initiate payment';
+            toast.error(`Payment Error: ${errorMessage}`);
+            setConfirmingPayment(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="page">
@@ -104,76 +248,224 @@ const Cart = () => {
                         </Link>
                     </div>
                 ) : (
-                    <div className="cart-container">
-                        {/* Cart Items */}
-                        <div className="cart-items">
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '20px'
-                            }}>
-                                <h2 style={{ fontSize: '1.2rem' }}>
-                                    {totalItems} {totalItems === 1 ? 'item' : 'items'}
-                                </h2>
-                                <button
-                                    className="btn btn-secondary btn-sm"
-                                    onClick={handleClearCart}
-                                    disabled={updating}
-                                >
-                                    <FiTrash2 /> Clear Cart
-                                </button>
+                    <div className="cart-payment-container">
+                        {/* Left Side - Bill Summary */}
+                        <div className="cart-bill-section">
+                            <div className="cart-items">
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '20px'
+                                }}>
+                                    <h2 style={{ fontSize: '1.3rem', fontWeight: '600' }}>
+                                        Cart Items ({totalItems})
+                                    </h2>
+                                    <button
+                                        className="btn btn-secondary btn-sm"
+                                        onClick={handleClearCart}
+                                        disabled={updating}
+                                    >
+                                        <FiTrash2 /> Clear Cart
+                                    </button>
+                                </div>
+
+                                {items.map((item) => (
+                                    <CartItem
+                                        key={item.product?._id || item._id}
+                                        item={item}
+                                        onUpdateQuantity={handleUpdateQuantity}
+                                        onRemove={handleRemove}
+                                        loading={updating}
+                                    />
+                                ))}
                             </div>
 
-                            {items.map((item) => (
-                                <CartItem
-                                    key={item.product?._id || item._id}
-                                    item={item}
-                                    onUpdateQuantity={handleUpdateQuantity}
-                                    onRemove={handleRemove}
-                                    loading={updating}
-                                />
-                            ))}
+                            {/* Detailed Bill Summary */}
+                            <div className="bill-summary-card">
+                                <h3 className="bill-summary-title">
+                                    <FiDollarSign /> Bill Summary
+                                </h3>
+
+                                <div className="bill-items-list">
+                                    {items.map((item) => (
+                                        <div key={item._id} className="bill-item-row">
+                                            <div className="bill-item-details">
+                                                <span className="bill-item-name">{item.product?.name}</span>
+                                                <span className="bill-item-qty">
+                                                    {item.quantity} × ₹{item.product?.price}
+                                                    {item.weight && ` (${item.weight}kg)`}
+                                                </span>
+                                            </div>
+                                            <span className="bill-item-price">
+                                                ₹{(item.product?.priceUnit === 'kg' && item.weight
+                                                    ? item.product?.price * item.weight
+                                                    : item.product?.price * item.quantity
+                                                ).toFixed(2)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="bill-calculations">
+                                    <div className="bill-calc-row">
+                                        <span>Subtotal</span>
+                                        <span>₹{subtotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="bill-calc-row">
+                                        <span>GST (5%)</span>
+                                        <span>₹{tax.toFixed(2)}</span>
+                                    </div>
+                                    <div className="bill-calc-row">
+                                        <span>Delivery</span>
+                                        <span style={{ color: 'var(--success)' }}>Free</span>
+                                    </div>
+                                    <div className="bill-calc-row bill-total">
+                                        <span>Total Amount</span>
+                                        <span>₹{finalTotal.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Cart Summary */}
-                        <div className="cart-summary">
-                            <h3 className="cart-summary-title">Order Summary</h3>
+                        {/* Right Side - Payment Section */}
+                        <div className="cart-qr-section">
+                            {/* Out of Stock Warning */}
+                            {hasOutOfStock && (
+                                <div className="stock-warning-card">
+                                    <FiAlertTriangle />
+                                    <div>
+                                        <strong>Some items are out of stock</strong>
+                                        <p>Please remove out-of-stock items to proceed</p>
+                                    </div>
+                                </div>
+                            )}
 
-                            <div className="cart-summary-row">
-                                <span>Subtotal</span>
-                                <span>₹{totalAmount.toFixed(2)}</span>
+                            {/* Payment Method Selection */}
+                            <div className="payment-method-card">
+                                <h3 className="payment-card-title">
+                                    <FiCreditCard /> Select Payment Method
+                                </h3>
+
+                                <div className="payment-options">
+                                    <label className={`payment-option ${paymentMethod === 'cod' ? 'active' : ''}`}>
+                                        <input
+                                            type="radio"
+                                            name="paymentMethod"
+                                            value="cod"
+                                            checked={paymentMethod === 'cod'}
+                                            onChange={(e) => {
+                                                setPaymentMethod(e.target.value);
+                                                setPaymentConfirmed(false);
+                                            }}
+                                        />
+                                        <div className="payment-option-content">
+                                            <strong>Cash on Delivery</strong>
+                                            <p>Pay when you receive your order</p>
+                                        </div>
+                                    </label>
+
+                                    <label className={`payment-option ${paymentMethod === 'online' ? 'active' : ''}`}>
+                                        <input
+                                            type="radio"
+                                            name="paymentMethod"
+                                            value="online"
+                                            checked={paymentMethod === 'online'}
+                                            onChange={(e) => {
+                                                setPaymentMethod(e.target.value);
+                                                setPaymentConfirmed(false);
+                                            }}
+                                        />
+                                        <div className="payment-option-content">
+                                            <strong>Online Payment (UPI)</strong>
+                                            <p>Pay instantly via UPI</p>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
-                            <div className="cart-summary-row">
-                                <span>Delivery</span>
-                                <span style={{ color: 'var(--success)' }}>Free</span>
+                            {/* Razorpay Payment Info */}
+                            {paymentMethod === 'online' && (
+                                <div className="qr-payment-card">
+                                    <h3 className="qr-card-title">Razorpay Secure Payment</h3>
+
+                                    <div className="payment-amount-display">
+                                        <span className="amount-label">Amount to Pay</span>
+                                        <span className="amount-value">₹{finalTotal.toFixed(2)}</span>
+                                    </div>
+
+                                    <div className="payment-instructions">
+                                        <p className="instruction-title">💳 How It Works:</p>
+                                        <ol className="instruction-list">
+                                            <li>Click "Pay Now" button below</li>
+                                            <li>Razorpay payment window will open</li>
+                                            <li>Select UPI payment method</li>
+                                            <li>Scan QR code or enter UPI ID</li>
+                                            <li>Complete payment in your UPI app</li>
+                                            <li>Order will be created automatically!</li>
+                                        </ol>
+                                    </div>
+
+                                    <div style={{
+                                        background: '#e3f2fd',
+                                        padding: '12px',
+                                        borderRadius: 'var(--border-radius-sm)',
+                                        marginTop: '16px'
+                                    }}>
+                                        <p style={{
+                                            fontSize: '0.85rem',
+                                            color: 'var(--secondary)',
+                                            margin: 0,
+                                            textAlign: 'center',
+                                            fontWeight: '500'
+                                        }}>
+                                            ✓ Secure payment powered by Razorpay
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <div className="cart-actions">
+                                {paymentMethod === 'online' ? (
+                                    <button
+                                        className="btn btn-primary btn-lg"
+                                        onClick={handleRazorpayPayment}
+                                        disabled={hasOutOfStock || confirmingPayment}
+                                        style={{ width: '100%' }}
+                                    >
+                                        {confirmingPayment ? (
+                                            'Processing...'
+                                        ) : (
+                                            <>
+                                                <FiCheckCircle /> Pay ₹{finalTotal.toFixed(2)} Now
+                                            </>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn btn-primary btn-lg"
+                                        onClick={handleCODOrder}
+                                        disabled={hasOutOfStock || confirmingPayment}
+                                        style={{ width: '100%' }}
+                                    >
+                                        {confirmingPayment ? (
+                                            'Placing Order...'
+                                        ) : (
+                                            <>
+                                                Place Order (COD) <FiArrowRight />
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+
+                                <Link
+                                    to="/products"
+                                    className="continue-shopping-link"
+                                >
+                                    Continue Shopping
+                                </Link>
                             </div>
-
-                            <div className="cart-summary-row total">
-                                <span>Total</span>
-                                <span>₹{totalAmount.toFixed(2)}</span>
-                            </div>
-
-                            <button
-                                className="btn btn-primary btn-lg"
-                                style={{ width: '100%', marginTop: '24px' }}
-                                onClick={() => navigate('/checkout')}
-                            >
-                                Proceed to Checkout <FiArrowRight />
-                            </button>
-
-                            <Link
-                                to="/products"
-                                style={{
-                                    display: 'block',
-                                    textAlign: 'center',
-                                    marginTop: '16px',
-                                    color: 'var(--primary-dark)'
-                                }}
-                            >
-                                Continue Shopping
-                            </Link>
                         </div>
                     </div>
                 )}

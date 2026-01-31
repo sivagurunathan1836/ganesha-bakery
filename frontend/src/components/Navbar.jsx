@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FiShoppingCart, FiUser, FiLogOut, FiPackage, FiSettings, FiChevronDown } from 'react-icons/fi';
+import { FiShoppingCart, FiUser, FiLogOut, FiPackage, FiSettings, FiChevronDown, FiCamera } from 'react-icons/fi';
 import { GiCupcake } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
 import { cartAPI } from '../services/api';
@@ -52,7 +52,7 @@ const Navbar = () => {
             <div className="navbar-container">
                 <Link to="/" className="navbar-logo">
                     <GiCupcake className="navbar-logo-icon" />
-                    <span>Ganesh Bakery</span>
+                    <span>Sri Ganesha Bakery</span>
                 </Link>
 
                 <div className="navbar-links">
@@ -68,6 +68,8 @@ const Navbar = () => {
                 </div>
 
                 <div className="navbar-actions">
+
+
                     {isAuthenticated && (
                         <Link to="/cart" className="navbar-cart">
                             <FiShoppingCart className="navbar-cart-icon" />

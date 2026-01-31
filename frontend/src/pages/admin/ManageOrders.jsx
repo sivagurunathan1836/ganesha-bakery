@@ -136,11 +136,19 @@ const ManageOrders = () => {
                                     <td style={{ fontWeight: '500' }}>{order.orderNumber}</td>
                                     <td>
                                         <div>{order.user?.name || 'N/A'}</div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>
-                                            {order.user?.email}
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            {order.items?.map((item, index) => (
+                                                <div key={index} style={{ fontSize: '0.9rem' }}>
+                                                    {item.product?.name || 'Unknown Product'}
+                                                    <span style={{ color: 'var(--gray-500)', fontSize: '0.8rem', marginLeft: '10px' }}>
+                                                        [<span style={{ fontWeight: 'bold', color: '#000' }}>{item.quantity}</span>]
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
                                     </td>
-                                    <td>{order.items?.length || 0} items</td>
                                     <td style={{ fontWeight: '600' }}>₹{order.totalAmount?.toFixed(2)}</td>
                                     <td>
                                         <span style={{

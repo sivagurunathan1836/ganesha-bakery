@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiArrowRight, FiStar } from 'react-icons/fi';
+import { FiArrowRight, FiStar, FiMapPin } from 'react-icons/fi';
 import { GiCupcake } from 'react-icons/gi';
 import ProductCard from '../components/ProductCard';
 import CategoryCard from '../components/CategoryCard';
@@ -10,6 +10,17 @@ const Home = () => {
     const [featuredProducts, setFeaturedProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [city, setCity] = useState('');
+    const [checkResult, setCheckResult] = useState(null); // 'success', 'error', or null
+
+    const handleCityCheck = (e) => {
+        e.preventDefault();
+        if (city.trim().toLowerCase() === 'karur') {
+            setCheckResult('success');
+        } else {
+            setCheckResult('error');
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -32,6 +43,107 @@ const Home = () => {
 
     return (
         <div>
+            {/* Location Check Bar */}
+            <div style={{ background: 'var(--primary)', padding: '20px 0', color: 'white' }}>
+                <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <FiMapPin style={{ fontSize: '24px' }} />
+                        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Check Delivery Availability</span>
+                    </div>
+
+                    <form onSubmit={handleCityCheck} style={{ display: 'flex', gap: '15px', alignItems: 'center', flex: 1, maxWidth: '600px', justifyContent: 'flex-end' }}>
+                        <select
+                            value={city}
+                            onChange={(e) => {
+                                setCity(e.target.value);
+                                setCheckResult(null);
+                            }}
+                            style={{
+                                padding: '12px 20px',
+                                borderRadius: '6px',
+                                border: 'none',
+                                outline: 'none',
+                                fontSize: '1.1rem',
+                                width: '100%',
+                                maxWidth: '350px',
+                                cursor: 'pointer',
+                                color: city ? '#333' : '#666'
+                            }}
+                            required
+                        >
+                            <option value="" disabled>Select your city</option>
+                            <option value="Ariyalur">Ariyalur</option>
+                            <option value="Chengalpattu">Chengalpattu</option>
+                            <option value="Chennai">Chennai</option>
+                            <option value="Coimbatore">Coimbatore</option>
+                            <option value="Cuddalore">Cuddalore</option>
+                            <option value="Dharmapuri">Dharmapuri</option>
+                            <option value="Dindigul">Dindigul</option>
+                            <option value="Erode">Erode</option>
+                            <option value="Kallakurichi">Kallakurichi</option>
+                            <option value="Kancheepuram">Kancheepuram</option>
+                            <option value="Karur">Karur</option>
+                            <option value="Krishnagiri">Krishnagiri</option>
+                            <option value="Madurai">Madurai</option>
+                            <option value="Mayiladuthurai">Mayiladuthurai</option>
+                            <option value="Nagapattinam">Nagapattinam</option>
+                            <option value="Namakkal">Namakkal</option>
+                            <option value="Nilgiris">Nilgiris</option>
+                            <option value="Perambalur">Perambalur</option>
+                            <option value="Pudukkottai">Pudukkottai</option>
+                            <option value="Ramanathapuram">Ramanathapuram</option>
+                            <option value="Ranipet">Ranipet</option>
+                            <option value="Salem">Salem</option>
+                            <option value="Sivaganga">Sivaganga</option>
+                            <option value="Tenkasi">Tenkasi</option>
+                            <option value="Thanjavur">Thanjavur</option>
+                            <option value="Theni">Theni</option>
+                            <option value="Thoothukudi">Thoothukudi</option>
+                            <option value="Tiruchirappalli">Tiruchirappalli</option>
+                            <option value="Tirunelveli">Tirunelveli</option>
+                            <option value="Tirupathur">Tirupathur</option>
+                            <option value="Tiruppur">Tiruppur</option>
+                            <option value="Tiruvallur">Tiruvallur</option>
+                            <option value="Tiruvannamalai">Tiruvannamalai</option>
+                            <option value="Tiruvarur">Tiruvarur</option>
+                            <option value="Vellore">Vellore</option>
+                            <option value="Viluppuram">Viluppuram</option>
+                            <option value="Virudhunagar">Virudhunagar</option>
+                        </select>
+                        <button type="submit" className="btn" style={{
+                            background: 'var(--secondary)',
+                            color: 'white',
+                            padding: '12px 30px',
+                            fontSize: '1.1rem',
+                            fontWeight: '600',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                        }}>Check</button>
+                    </form>
+                </div>
+            </div>
+
+            {/* Check Result Message */}
+            {checkResult && (
+                <div style={{
+                    textAlign: 'center',
+                    padding: '8px',
+                    background: checkResult === 'success' ? '#d4edda' : '#f8d7da',
+                    color: checkResult === 'success' ? '#155724' : '#721c24',
+                    borderBottom: '1px solid rgba(0,0,0,0.1)',
+                    fontSize: '0.9rem'
+                }}>
+                    <div className="container">
+                        {checkResult === 'success' ? (
+                            <><strong>Great!</strong> We deliver to Karur. <Link to="/products" style={{ textDecoration: 'underline', fontWeight: 'bold', marginLeft: '5px', color: 'inherit' }}>Shop Now</Link></>
+                        ) : (
+                            <><strong>Sorry!</strong> We currently only deliver to Karur.</>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Hero Section */}
             <section className="hero">
                 <div className="hero-container">
@@ -132,7 +244,7 @@ const Home = () => {
                 <div className="container">
                     <div className="section-header">
                         <span className="section-subtitle">Why Us</span>
-                        <h2 className="section-title">Why Choose Ganesh Bakery?</h2>
+                        <h2 className="section-title">Why Choose Sri Ganesha Bakery?</h2>
                     </div>
 
                     <div style={{

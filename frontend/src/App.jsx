@@ -15,7 +15,9 @@ import ProductDetail from './pages/ProductDetail';
 import Categories from './pages/Categories';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+
 import Orders from './pages/Orders';
+import ScanQR from './pages/ScanQR';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -75,7 +77,9 @@ function App() {
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/products/:id" element={<ProductDetail />} />
+
                     <Route path="/categories" element={<Categories />} />
+                    <Route path="/scan" element={<ScanQR />} />
 
                     {/* Protected Routes */}
                     <Route path="/cart" element={

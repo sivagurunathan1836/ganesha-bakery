@@ -10,7 +10,7 @@ const Footer = () => {
                     <div className="footer-brand">
                         <h3>
                             <GiCupcake style={{ marginRight: '10px' }} />
-                            Ganesh Bakery
+                            Sri Ganesha Bakery
                         </h3>
                         <p>
                             Bringing you the finest baked goods, traditional sweets, and delicious snacks
@@ -34,7 +34,7 @@ const Footer = () => {
                             <li><Link to="/products?category=biscuits">Biscuits</Link></li>
                             <li><Link to="/products?category=cakes">Cakes</Link></li>
                             <li><Link to="/products?category=sweets">Sweets</Link></li>
-                            <li><Link to="/products?category=breads">Breads</Link></li>
+                            <li><Link to="/products?category=puffs">Puffs</Link></li>
                         </ul>
                     </div>
 
@@ -43,22 +43,22 @@ const Footer = () => {
                         <ul className="footer-links">
                             <li>
                                 <FiMapPin style={{ marginRight: '8px' }} />
-                                123 Bakery Street, Chennai
+                                11/27A, Thanga Tamil Park, Panchamadevikarur
                             </li>
                             <li>
                                 <FiPhone style={{ marginRight: '8px' }} />
-                                +91 98765 43210
+                                +91 9500966009
                             </li>
                             <li>
                                 <FiMail style={{ marginRight: '8px' }} />
-                                info@ganeshbakery.com
+                                sriganeshabakery@gmail.com
                             </li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="footer-bottom">
-                    <p>&copy; 2024 Ganesh Bakery. All rights reserved.</p>
+                    <p>&copy; 2024 Sri Ganesha Bakery. All rights reserved.</p>
                 </div>
             </div>
         </footer>

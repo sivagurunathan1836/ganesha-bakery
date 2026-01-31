@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiMapPin, FiCreditCard, FiCheck } from 'react-icons/fi';
+import { QRCodeSVG } from 'qrcode.react';
 import { cartAPI, ordersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -46,6 +47,18 @@ const Checkout = () => {
         fetchCart();
     }, [navigate]);
 
+    // Generate dynamic UPI payment URL with total amount
+    const generateUPIUrl = () => {
+        const upiId = 'sekarparameshwari09-1@oksbi';
+        const payeeName = 'Ganesh Bakery';
+        const amount = totalAmount.toFixed(2);
+        const currency = 'INR';
+        const transactionNote = 'Order Payment';
+
+        return `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=${currency}&tn=${encodeURIComponent(transactionNote)}`;
+    };
+
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -80,7 +93,9 @@ const Checkout = () => {
             toast.success('Order placed successfully!');
             navigate(`/orders/${response.data._id}`);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to place order');
+            console.error('Order placement error:', error);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to place order';
+            toast.error(errorMessage);
         } finally {
             setSubmitting(false);
         }
@@ -237,12 +252,119 @@ const Checkout = () => {
                                             onChange={handleChange}
                                         />
                                         <div>
-                                            <strong>Online Payment</strong>
+                                            <strong>Online Payment (UPI)</strong>
                                             <p style={{ fontSize: '0.875rem', color: 'var(--gray-500)', margin: 0 }}>
-                                                Pay securely online (Coming Soon)
+                                                Pay using UPI - Scan QR code below
                                             </p>
                                         </div>
                                     </label>
+
+                                    {/* QR Code Section - Show when online payment is selected */}
+                                    {formData.paymentMethod === 'online' && (
+                                        <div style={{
+                                            marginTop: '16px',
+                                            padding: '24px',
+                                            background: 'var(--white)',
+                                            border: '2px solid var(--primary)',
+                                            borderRadius: 'var(--border-radius)',
+                                            textAlign: 'center'
+                                        }}>
+                                            <h3 style={{
+                                                fontSize: '1.1rem',
+                                                fontWeight: '600',
+                                                color: 'var(--secondary)',
+                                                marginBottom: '16px'
+                                            }}>
+                                                Scan QR Code to Pay
+                                            </h3>
+
+                                            {/* Dynamic QR Code */}
+                                            <div style={{
+                                                background: 'var(--gray-50)',
+                                                padding: '20px',
+                                                borderRadius: 'var(--border-radius-sm)',
+                                                display: 'inline-block',
+                                                marginBottom: '16px'
+                                            }}>
+                                                <QRCodeSVG
+                                                    value={generateUPIUrl()}
+                                                    size={220}
+                                                    level="H"
+                                                    includeMargin={true}
+                                                    bgColor="#ffffff"
+                                                    fgColor="#000000"
+                                                />
+                                            </div>
+
+                                            {/* Amount Display */}
+                                            <div style={{
+                                                background: 'linear-gradient(135deg, var(--primary-light) 0%, #fff5eb 100%)',
+                                                padding: '12px 16px',
+                                                borderRadius: 'var(--border-radius-sm)',
+                                                marginBottom: '12px'
+                                            }}>
+                                                <p style={{
+                                                    fontSize: '0.85rem',
+                                                    color: 'var(--gray-600)',
+                                                    margin: '0 0 4px 0',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px'
+                                                }}>
+                                                    Amount to Pay
+                                                </p>
+                                                <p style={{
+                                                    fontSize: '1.8rem',
+                                                    fontWeight: '700',
+                                                    color: 'var(--secondary)',
+                                                    margin: 0
+                                                }}>
+                                                    ₹{totalAmount.toFixed(2)}
+                                                </p>
+                                            </div>
+
+                                            <div style={{
+                                                background: 'var(--primary-light)',
+                                                padding: '12px 16px',
+                                                borderRadius: 'var(--border-radius-sm)',
+                                                marginBottom: '12px'
+                                            }}>
+                                                <p style={{
+                                                    fontSize: '0.9rem',
+                                                    color: 'var(--secondary)',
+                                                    fontWeight: '500',
+                                                    margin: 0
+                                                }}>
+                                                    UPI ID: sekarparameshwari09-1@oksbi
+                                                </p>
+                                            </div>
+
+                                            <p style={{
+                                                fontSize: '0.85rem',
+                                                color: 'var(--gray-600)',
+                                                margin: '8px 0 0 0'
+                                            }}>
+                                                Scan using any UPI app (Google Pay, PhonePe, Paytm, etc.)
+                                            </p>
+
+                                            <p style={{
+                                                fontSize: '0.85rem',
+                                                color: 'var(--success)',
+                                                marginTop: '8px',
+                                                fontWeight: '500'
+                                            }}>
+                                                ✓ Amount ₹{totalAmount.toFixed(2)} will be auto-filled in your UPI app
+                                            </p>
+
+                                            <p style={{
+                                                fontSize: '0.8rem',
+                                                color: 'var(--warning)',
+                                                marginTop: '12px',
+                                                fontWeight: '500'
+                                            }}>
+                                                ⚠️ After payment, click "Place Order" to complete your order
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

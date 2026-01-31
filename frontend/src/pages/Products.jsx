@@ -23,13 +23,34 @@ const Products = () => {
         const fetchCategories = async () => {
             try {
                 const response = await categoriesAPI.getAll();
-                setCategories(response.data || []);
+                const fetchedCategories = response.data || [];
+                setCategories(fetchedCategories);
+
+                // Check if the URL has a category name (like 'biscuits') instead of an ID
+                const categoryParam = searchParams.get('category');
+                if (categoryParam && fetchedCategories.length > 0) {
+                    // Check if it's a category name (not a MongoDB ObjectId)
+                    const isObjectId = /^[a-f\d]{24}$/i.test(categoryParam);
+                    if (!isObjectId) {
+                        // Find the category by name (case-insensitive)
+                        const matchedCategory = fetchedCategories.find(
+                            cat => cat.name.toLowerCase() === categoryParam.toLowerCase()
+                        );
+                        if (matchedCategory) {
+                            // Update the URL and filters with the actual category ID
+                            const params = new URLSearchParams(searchParams);
+                            params.set('category', matchedCategory._id);
+                            setSearchParams(params, { replace: true });
+                            setFilters(prev => ({ ...prev, category: matchedCategory._id }));
+                        }
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching categories:', error);
             }
         };
         fetchCategories();
-    }, []);
+    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -126,8 +147,20 @@ const Products = () => {
                             className="form-input form-select"
                             value={filters.category}
                             onChange={(e) => {
-                                handleFilterChange('category', e.target.value);
-                                handleFilterChange('subcategory', '');
+                                const newCategory = e.target.value;
+                                const newFilters = {
+                                    ...filters,
+                                    category: newCategory,
+                                    subcategory: ''
+                                };
+                                setFilters(newFilters);
+
+                                const params = new URLSearchParams();
+                                Object.entries(newFilters).forEach(([k, v]) => {
+                                    if (v) params.set(k, v);
+                                });
+                                params.delete('page'); // Reset to page 1 when changing category
+                                setSearchParams(params);
                             }}
                         >
                             <option value="">All Categories</option>

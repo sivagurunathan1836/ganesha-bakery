@@ -9,13 +9,19 @@ exports.createOrder = async (req, res) => {
     try {
         const { shippingAddress, paymentMethod = 'cod', notes } = req.body;
 
+        console.log('Creating order with body:', JSON.stringify(req.body, null, 2));
+        console.log('User ID:', req.user._id);
+
         // Get user's cart
         const cart = await Cart.findOne({ user: req.user._id })
             .populate('items.product');
 
         if (!cart || cart.items.length === 0) {
+            console.log('Cart empty or not found for user:', req.user._id);
             return res.status(400).json({ message: 'Cart is empty' });
         }
+
+        console.log('Found cart items:', cart.items.length);
 
         // Validate stock and prepare order items
         const orderItems = [];
@@ -25,10 +31,12 @@ exports.createOrder = async (req, res) => {
             const product = await Product.findById(item.product._id);
 
             if (!product) {
+                console.log(`Product not found: ${item.product._id}`);
                 return res.status(400).json({ message: `Product ${item.product.name} not found` });
             }
 
             if (product.stock < item.quantity) {
+                console.log(`Insufficient stock for ${product.name}: Required ${item.quantity}, Available ${product.stock}`);
                 return res.status(400).json({
                     message: `Insufficient stock for ${product.name}. Available: ${product.stock}`
                 });
@@ -68,13 +76,14 @@ exports.createOrder = async (req, res) => {
         });
 
         // Clear cart
+        // Clear cart
         cart.items = [];
         await cart.save();
 
         res.status(201).json(order);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error('Create Order Error:', error);
+        res.status(500).json({ message: 'Server error', error: error.message, stack: error.stack });
     }
 };
 
